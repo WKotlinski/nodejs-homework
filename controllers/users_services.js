@@ -26,7 +26,7 @@ const findById = async ({ id }) => {
 };
 
 const loginUser = async ({ email, password }) => {
-  const user = Users.findOne({ email });
+  const user = await Users.findOne({ email });
   if (!user) {
     throw new Error("Invalid email or password");
   }

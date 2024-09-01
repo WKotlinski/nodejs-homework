@@ -27,7 +27,7 @@ const auth = async (req, res, next) => {
   }
 
   try {
-    const { id } = jwt.verify(token, process.env.JWT_SECRET);
+    const { id } = jwt.verify(token, process.env.SECRET);
     const user = await findById(id);
 
     if (!user || user.token !== token) {
