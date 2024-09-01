@@ -6,6 +6,7 @@ const {
   registerUser,
   findUser,
   findById,
+  loginUser,
 } = require("../../controllers/users_services");
 
 const router = express.Router();
@@ -78,21 +79,10 @@ router.post("/login", async (req, res, next) => {
     }
 
     const { email, password } = req.body;
-    const user = await findUser(email);
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Email or password is wrong" });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-
-    user.token = token;
-    await user.save();
+    const user = await loginUser({ email, password });
 
     return res.status(200).json({
-      token,
+      token: user.token,
       user: {
         email: user.email,
         subscription: user.subscription,

@@ -39,6 +39,7 @@ const loginUser = async ({ email, password }) => {
   });
   user.token = token;
   await user.save();
+  return user;
 };
 module.exports = {
   findUser,
