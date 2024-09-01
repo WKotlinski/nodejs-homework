@@ -50,22 +50,25 @@ router.post("/signup", async (req, res, next) => {
   if (!email || !password) {
     return res.status(409).json({ message: "Missing required field" });
   }
-  const user = await findUser(email);
-  if (user) {
-    return res.status(409).json({ message: "Email already in use" });
-  }
+
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      email,
-      password: hashedPassword,
-    };
-    const createdUser = await registerUser(newUser);
-    return res.status(201).json({ message: `${createdUser.email} registerd` });
+    const user = await findUser({ email });
+    if (user) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
+    const createdUser = await registerUser({ email, password });
+    return res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        email: createdUser.email,
+        subscription: createdUser.subscription,
+      },
+    });
   } catch (error) {
     next(error);
   }
 });
+
 // Login
 router.post("/login", async (req, res, next) => {
   try {
