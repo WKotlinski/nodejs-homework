@@ -15,13 +15,12 @@ const registerUser = async ({ email, password }) => {
 const findUser = async ({ email }) => {
   const user = await Users.findOne({ email });
   if (user) {
-    throw new Error("Email already taken");
+    return user;
   }
-  return user;
 };
 
 const findById = async ({ id }) => {
-  const user = Users.findById({ id });
+  const user = await Users.findById({ id });
   return user;
 };
 
@@ -34,7 +33,7 @@ const loginUser = async ({ email, password }) => {
   if (!isPasswordGood) {
     throw new Error("Invalid email or password");
   }
-  const token = jwt.sign({ id: user.id }, process.env.SECRET, {
+  const token = jwt.sign({ id: user._id }, process.env.SECRET, {
     expiresIn: "1h",
   });
   user.token = token;
