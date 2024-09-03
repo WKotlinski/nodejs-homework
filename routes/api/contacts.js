@@ -5,7 +5,7 @@ const {
   addContact,
   removeContact,
   updatedStatusContact,
-} = require("../../controllers/services");
+} = require("../../controllers/contacts_services");
 
 const Joi = require("joi");
 
