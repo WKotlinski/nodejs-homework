@@ -19,8 +19,8 @@ const findUser = async ({ email }) => {
   }
 };
 
-const findById = async ({ id }) => {
-  const user = await Users.findById({ id });
+const findById = async (id) => {
+  const user = await Users.findById(id);
   return user;
 };
 

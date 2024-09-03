@@ -93,7 +93,7 @@ router.post("/login", async (req, res, next) => {
   }
 });
 // Logout
-router.post("/logout", async (req, res, next) => {
+router.post("/logout", auth, async (req, res, next) => {
   try {
     const user = req.user;
 
