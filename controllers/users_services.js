@@ -2,11 +2,13 @@ const { Users } = require("../models/user");
 require("dotenv").config();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
 
 const registerUser = async ({ email, password }) => {
   const newUser = new Users({
     email,
     password: await bcrypt.hash(password, 10),
+    avatarURL: gravatar.url(email),
   });
   await newUser.save();
   return newUser;
@@ -40,9 +42,15 @@ const loginUser = async ({ email, password }) => {
   await user.save();
   return user;
 };
+
+const findByIdAndAvatarUpdate = async (id, avatarUrl) => {
+  const user = await Users.findByIdAndUpdate(id, { avatarUrl });
+  return user;
+};
 module.exports = {
   findUser,
   findById,
+  findByIdAndAvatarUpdate,
   registerUser,
   loginUser,
 };
