@@ -15,7 +15,7 @@ const startServer = async () => {
     });
   } catch (err) {
     console.log(err);
-    process.env(1);
+    process.exit(1);
   }
 };
 module.exports = { startServer };
