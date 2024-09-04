@@ -1,3 +1,4 @@
+const { string } = require("joi");
 const mongoose = require("mongoose");
 const usersSchema = new mongoose.Schema({
   password: {
@@ -18,6 +19,7 @@ const usersSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  avatarURL: { type: string },
 });
 
 const Users = mongoose.model("user", usersSchema, "users");
