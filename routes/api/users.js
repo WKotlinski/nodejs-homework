@@ -1,12 +1,17 @@
-const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const express = require("express");
 const Joi = require("joi");
+const multer = require("multer");
+const jimp = require("jimp");
+const path = require("node:path");
+const fs = require("node:fs");
+
 const {
   registerUser,
   findUser,
   findById,
   loginUser,
+  findByIdAndAvatarUpdate,
 } = require("../../controllers/users_services");
 
 const router = express.Router();
@@ -16,6 +21,7 @@ const schema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
+const update = multer({ dest: "../../temp" });
 // Auth
 
 const auth = async (req, res, next) => {
@@ -109,14 +115,43 @@ router.post("/logout", auth, async (req, res, next) => {
     next(error);
   }
 });
-
-router.get("/current", auth, async (req, res, next) => {
-  const { email, subscribtion } = req.body;
-  const user = await findUser({ email });
-  if (!user) {
-    return res.status(401).json({ message: "User not found" });
+// Current
+router.get(
+  "/current",
+  auth,
+  update.single("avatar"),
+  async (req, res, next) => {
+    const { email, subscribtion } = req.body;
+    const user = await findUser({ email });
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    return res.status(201).json({ email, subscribtion });
   }
-  return res.status(201).json({ email, subscribtion });
-});
+);
+//
+router.patch(
+  "/avatars",
+  auth,
+  update.single("avatar"),
+  async (req, res, next) => {
+    try {
+      const { tempPath, originalName } = req.file;
+      const extension = tempPath.extname(originalName).toLowerCase();
+      const fileName = `${req.user._id}${extension}`;
+      const newPath = path.join(__dirname, "../../public/avatars", fileName);
 
+      const img = await jimp.read(tempPath);
+      await img.resize(250, 250).writeAsync(newPath);
+
+      await fs.unlink(tempPath);
+
+      const avatarURL = `/avatars/${fileName}`;
+      await findByIdAndAvatarUpdate(req.user._id, avatarURL);
+      res.status(200).json({ avatarURL });
+    } catch (e) {
+      return next(e);
+    }
+  }
+);
 module.exports = router;
