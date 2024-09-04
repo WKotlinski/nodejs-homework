@@ -136,7 +136,14 @@ router.patch(
   update.single("avatar"),
   async (req, res, next) => {
     try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
       const { tempPath, originalName } = req.file;
+      if (!originalName) {
+        return res.status(400).json({ message: "File name is missing" });
+      }
       const extension = tempPath.extname(originalName).toLowerCase();
       const fileName = `${req.user._id}${extension}`;
       const newPath = path.join(__dirname, "../../public/avatars", fileName);
