@@ -1,12 +1,18 @@
-const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const express = require("express");
 const Joi = require("joi");
+const multer = require("multer");
+const jimp = require("jimp");
+const path = require("node:path");
+const fs = require("node:fs");
+const { v4: uuidv4 } = require("uuid");
+
 const {
   registerUser,
   findUser,
   findById,
   loginUser,
+  findByIdAndAvatarUpdate,
 } = require("../../controllers/users_services");
 
 const router = express.Router();
@@ -16,8 +22,19 @@ const schema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
-// Auth
+// Multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "/tmp");
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
 
+const update = multer(storage);
+
+// Auth
 const auth = async (req, res, next) => {
   const { authorization = "" } = req.headers;
   const token = authorization.split(" ")[1];
@@ -110,13 +127,58 @@ router.post("/logout", auth, async (req, res, next) => {
   }
 });
 
-router.get("/current", auth, async (req, res, next) => {
-  const { email, subscribtion } = req.body;
-  const user = await findUser({ email });
-  if (!user) {
-    return res.status(401).json({ message: "User not found" });
+// Current
+router.get(
+  "/current",
+  auth,
+  update.single("avatar"),
+  async (req, res, next) => {
+    const { email, subscribtion } = req.body;
+    const user = await findUser({ email });
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    return res.status(201).json({ email, subscribtion });
   }
-  return res.status(201).json({ email, subscribtion });
-});
+);
 
+// Avatar patch
+router.patch(
+  "/avatars",
+  auth,
+  update.single("avatar"),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { path: tempPath, originalname } = req.file;
+      if (!tempPath || !originalname) {
+        return res.status(400).json({ message: "File name is missing" });
+      }
+      const extension = path.extname(originalname).toLowerCase();
+      const fileName = `${req.user._id}${extension}`;
+      const newPath = path.join(__dirname, "../../public/avatars", fileName);
+
+      const img = await jimp.read(tempPath);
+      await img.resize(250, 250).writeAsync(newPath);
+
+      try {
+        await fs.unlink(tempPath);
+      } catch (unlingError) {
+        console.log("Error deleting temp file", unlingError);
+        return res
+          .status(500)
+          .json({ message: "Error cleaning up temporary file" });
+      }
+
+      const avatarURL = `/avatars/${fileName}`;
+      await findByIdAndAvatarUpdate(req.user._id, avatarURL);
+      res.status(200).json({ avatarURL });
+    } catch (e) {
+      return next(e);
+    }
+  }
+);
 module.exports = router;
