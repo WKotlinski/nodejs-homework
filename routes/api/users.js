@@ -5,6 +5,7 @@ const multer = require("multer");
 const jimp = require("jimp");
 const path = require("node:path");
 const fs = require("node:fs");
+const { v4: uuidv4 } = require("uuid");
 
 const {
   registerUser,
@@ -21,9 +22,20 @@ const schema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
-const update = multer({ dest: "../../temp" });
-// Auth
+// Multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "tmp/");
+  },
+  filename: (req, file, cb) => {
+    const extension = path.extname(file.originalname);
+    cb(null, `${uuidv4}${extension}`);
+  },
+});
 
+const update = multer(storage);
+
+// Auth
 const auth = async (req, res, next) => {
   const { authorization = "" } = req.headers;
   const token = authorization.split(" ")[1];
@@ -115,6 +127,7 @@ router.post("/logout", auth, async (req, res, next) => {
     next(error);
   }
 });
+
 // Current
 router.get(
   "/current",
@@ -129,7 +142,8 @@ router.get(
     return res.status(201).json({ email, subscribtion });
   }
 );
-//
+
+// Avatar patch
 router.patch(
   "/avatars",
   auth,
