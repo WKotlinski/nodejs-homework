@@ -43,8 +43,8 @@ const loginUser = async ({ email, password }) => {
   return user;
 };
 
-const findByIdAndAvatarUpdate = async (id, avatarUrl) => {
-  const user = await Users.findByIdAndUpdate(id, { avatarUrl });
+const findByIdAndAvatarUpdate = async (id, avatarURL) => {
+  const user = await Users.findByIdAndUpdate(id, { avatarURL });
   return user;
 };
 module.exports = {

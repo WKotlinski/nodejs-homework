@@ -25,11 +25,10 @@ const schema = Joi.object({
 // Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "tmp/");
+    cb(null, "/tmp");
   },
   filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname);
-    cb(null, `${uuidv4}${extension}`);
+    cb(null, file.originalname);
   },
 });
 
@@ -154,18 +153,25 @@ router.patch(
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const { tempPath, originalName } = req.file;
-      if (!originalName) {
+      const { path: tempPath, originalname } = req.file;
+      if (!tempPath || !originalname) {
         return res.status(400).json({ message: "File name is missing" });
       }
-      const extension = tempPath.extname(originalName).toLowerCase();
+      const extension = path.extname(originalname).toLowerCase();
       const fileName = `${req.user._id}${extension}`;
       const newPath = path.join(__dirname, "../../public/avatars", fileName);
 
       const img = await jimp.read(tempPath);
       await img.resize(250, 250).writeAsync(newPath);
 
-      await fs.unlink(tempPath);
+      try {
+        await fs.unlink(tempPath);
+      } catch (unlingError) {
+        console.log("Error deleting temp file", unlingError);
+        return res
+          .status(500)
+          .json({ message: "Error cleaning up temporary file" });
+      }
 
       const avatarURL = `/avatars/${fileName}`;
       await findByIdAndAvatarUpdate(req.user._id, avatarURL);
