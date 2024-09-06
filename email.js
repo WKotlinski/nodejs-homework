@@ -14,7 +14,7 @@ const config = {
 const transporter = nodemailer.createTransport(config);
 
 const emailOptions = (to, subject, html) => {
-  return { from: "Wojciech Kot <wojcio888@gmail.com>", to, subject, html };
+  return { from: process.env.EMAIL_FROM, to, subject, html };
 };
 const sendMail = async (to, subject, html) => {
   try {
