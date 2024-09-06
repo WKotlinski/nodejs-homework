@@ -1,21 +1,20 @@
-const jwt = require("jsonwebtoken");
 const express = require("express");
 const Joi = require("joi");
 const multer = require("multer");
 const jimp = require("jimp");
 const path = require("node:path");
 const fs = require("node:fs");
+require("dotenv").config();
 
 const {
   registerUser,
   findUser,
-  findById,
   loginUser,
   findByIdAndAvatarUpdate,
 } = require("../../controllers/users_services");
 const { sendMail } = require("../../email");
 const { Users } = require("../../models/user");
-const { Verify } = require("node:crypto");
+const { auth } = require("../../config/auth");
 
 const router = express.Router();
 
@@ -36,30 +35,6 @@ const storage = multer.diskStorage({
 
 const update = multer(storage);
 
-// Auth
-const auth = async (req, res, next) => {
-  const { authorization = "" } = req.headers;
-  const token = authorization.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-
-  try {
-    const { id } = jwt.verify(token, process.env.SECRET);
-    const user = await findById(id);
-
-    if (!user || user.token !== token) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-};
-
 // Register
 router.post("/signup", async (req, res, next) => {
   const { error } = schema.validate(req.body);
@@ -77,7 +52,7 @@ router.post("/signup", async (req, res, next) => {
       return res.status(409).json({ message: "Email already in use" });
     }
     const createdUser = await registerUser({ email, password });
-    const html = `<p>Hello, here is your verification <a href=http://localhost:${PORT}/api/users//verify/${user.verificationToken}></a>link</p>`;
+    const html = `<p>Hello, here is your verification <a href=http://localhost:${process.env.PORT}/api/users/verify/${user.verificationToken}></a>link</p>`;
     await sendMail(email, "Registraction", html);
     return res.status(201).json({
       message: "User registered successfully",
