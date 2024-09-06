@@ -15,6 +15,7 @@ const {
 } = require("../../controllers/users_services");
 const { sendMail } = require("../../email");
 const { Users } = require("../../models/user");
+const { Verify } = require("node:crypto");
 
 const router = express.Router();
 
@@ -77,7 +78,7 @@ router.post("/signup", async (req, res, next) => {
     }
     const createdUser = await registerUser({ email, password });
     const html = `<p>Hello, here is your verification <a href=http://localhost:${PORT}/api/users//verify/${user.verificationToken}></a>link</p>`;
-    sendMail(email, "Registraction", html);
+    await sendMail(email, "Registraction", html);
     return res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -89,6 +90,7 @@ router.post("/signup", async (req, res, next) => {
     next(error);
   }
 });
+
 // Verification
 router.get("/verify/:verificationToken", auth, async (req, res, next) => {
   try {
@@ -103,6 +105,35 @@ router.get("/verify/:verificationToken", auth, async (req, res, next) => {
     return res.status(200).json({ message: "Verification successful" });
   } catch (e) {
     next(e);
+  }
+});
+
+// Verify
+router.post("/verify", async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "missing required field email" });
+  }
+
+  try {
+    const user = await Users.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.verify) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+
+    const html = `<p>Hello, here is your verification <a href=http://localhost:${PORT}/api/users//verify/${user.verificationToken}></a>link</p>`;
+
+    await sendMail(email, "Verify your email please", html);
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
+    next(error);
   }
 });
 
