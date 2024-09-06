@@ -1,4 +1,6 @@
 const express = require("express");
+const Joi = require("joi");
+
 const {
   listContacts,
   getContactById,
@@ -6,8 +8,6 @@ const {
   removeContact,
   updatedStatusContact,
 } = require("../../controllers/contacts_services");
-
-const Joi = require("joi");
 
 const router = express.Router();
 
