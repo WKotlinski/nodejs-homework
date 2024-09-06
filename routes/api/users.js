@@ -5,7 +5,6 @@ const multer = require("multer");
 const jimp = require("jimp");
 const path = require("node:path");
 const fs = require("node:fs");
-const { v4: uuidv4 } = require("uuid");
 
 const {
   registerUser,
@@ -14,6 +13,8 @@ const {
   loginUser,
   findByIdAndAvatarUpdate,
 } = require("../../controllers/users_services");
+const { sendMail } = require("../../email");
+const { Users } = require("../../models/user");
 
 const router = express.Router();
 
@@ -75,6 +76,8 @@ router.post("/signup", async (req, res, next) => {
       return res.status(409).json({ message: "Email already in use" });
     }
     const createdUser = await registerUser({ email, password });
+    const html = `<p>Hello, here is your verification <a href=http://localhost:${PORT}/api/users//verify/${user.verificationToken}></a>link</p>`;
+    sendMail(email, "Registraction", html);
     return res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -84,6 +87,22 @@ router.post("/signup", async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+});
+// Verification
+router.get("/verify/:verificationToken", auth, async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+    const user = await Users.findOne({ verificationToken });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.verificationToken = null;
+    user.verify = true;
+    await user.save();
+    return res.status(200).json({ message: "Verification successful" });
+  } catch (e) {
+    next(e);
   }
 });
 
