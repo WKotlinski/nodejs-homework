@@ -1,19 +1,20 @@
-const jwt = require("jsonwebtoken");
 const express = require("express");
 const Joi = require("joi");
 const multer = require("multer");
 const jimp = require("jimp");
 const path = require("node:path");
 const fs = require("node:fs");
-const { v4: uuidv4 } = require("uuid");
+require("dotenv").config();
 
 const {
   registerUser,
   findUser,
-  findById,
   loginUser,
   findByIdAndAvatarUpdate,
 } = require("../../controllers/users_services");
+const { sendMail } = require("../../email");
+const { Users } = require("../../models/user");
+const { auth } = require("../../config/auth");
 
 const router = express.Router();
 
@@ -34,30 +35,6 @@ const storage = multer.diskStorage({
 
 const update = multer(storage);
 
-// Auth
-const auth = async (req, res, next) => {
-  const { authorization = "" } = req.headers;
-  const token = authorization.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-
-  try {
-    const { id } = jwt.verify(token, process.env.SECRET);
-    const user = await findById(id);
-
-    if (!user || user.token !== token) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-};
-
 // Register
 router.post("/signup", async (req, res, next) => {
   const { error } = schema.validate(req.body);
@@ -75,6 +52,8 @@ router.post("/signup", async (req, res, next) => {
       return res.status(409).json({ message: "Email already in use" });
     }
     const createdUser = await registerUser({ email, password });
+    const html = `<p>Hello, here is your verification <a href=http://localhost:${process.env.PORT}/api/users/verify/${user.verificationToken}></a>link</p>`;
+    await sendMail(email, "Registraction", html);
     return res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -82,6 +61,52 @@ router.post("/signup", async (req, res, next) => {
         subscription: createdUser.subscription,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Verification
+router.get("/verify/:verificationToken", auth, async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+    const user = await Users.findOne({ verificationToken });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.verificationToken = null;
+    user.verify = true;
+    await user.save();
+    return res.status(200).json({ message: "Verification successful" });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Verify
+router.post("/verify", async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "missing required field email" });
+  }
+
+  try {
+    const user = await Users.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.verify) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+
+    const html = `<p>Hello, here is your verification <a href=http://localhost:${PORT}/api/users//verify/${user.verificationToken}></a>link</p>`;
+
+    await sendMail(email, "Verify your email please", html);
+    res.status(200).json({ message: "Verification email sent" });
   } catch (error) {
     next(error);
   }

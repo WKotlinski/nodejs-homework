@@ -1,4 +1,3 @@
-const { string } = require("joi");
 const mongoose = require("mongoose");
 const usersSchema = new mongoose.Schema({
   password: {
@@ -20,6 +19,14 @@ const usersSchema = new mongoose.Schema({
     default: null,
   },
   avatarURL: { type: String },
+  verify: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+    required: [true, "Verify token is required"],
+  },
 });
 
 const Users = mongoose.model("user", usersSchema, "users");

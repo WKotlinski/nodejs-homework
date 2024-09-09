@@ -3,12 +3,14 @@ require("dotenv").config();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
+const { v4: uuidv4 } = require("uuid");
 
 const registerUser = async ({ email, password }) => {
   const newUser = new Users({
     email,
     password: await bcrypt.hash(password, 10),
     avatarURL: gravatar.url(email),
+    verificationToken: uuidv4(),
   });
   await newUser.save();
   return newUser;
